@@ -37,6 +37,8 @@ export default defineConfig(({ command }) => ({
       },
     }),
     viteReact(),
-    command === "build" ? cloudflare({ viteEnvironment: { name: "ssr" } }) : null,
+    command === "build" && !process.env.VERCEL
+      ? cloudflare({ viteEnvironment: { name: "ssr" } })
+      : null,
   ].filter(Boolean),
 }));
