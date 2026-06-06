@@ -1,0 +1,12 @@
+Inside the backend run these commands first: 
+python -m venv venv
+
+venv\Scripts\activate
+
+python app.py
+
+
+in front end: 
+npm run build
+
+npm run dev
