@@ -24,7 +24,13 @@ export default defineConfig(async ({ command }) => {
     viteReact(),
   ];
 
-  // Only load Cloudflare plugin for non-Vercel production builds
+  // Vercel: add Nitro plugin for serverless function compilation
+  if (isVercel) {
+    const { nitro } = await import("nitro/vite");
+    plugins.push(nitro());
+  }
+
+  // Cloudflare: add Cloudflare plugin for Workers/Pages builds
   if (command === "build" && !isVercel) {
     try {
       const { cloudflare } = await import("@cloudflare/vite-plugin");
