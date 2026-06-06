@@ -3,31 +3,16 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import tsconfigPaths from "vite-tsconfig-paths";
 import tailwindcss from "@tailwindcss/vite";
-import { cloudflare } from "@cloudflare/vite-plugin";
 
-export default defineConfig(({ command }) => ({
-  resolve: {
-    alias: {
-      "@": `${process.cwd()}/src`,
-    },
-    dedupe: [
-      "react",
-      "react-dom",
-      "react/jsx-runtime",
-      "react/jsx-dev-runtime",
-      "@tanstack/react-query",
-      "@tanstack/query-core",
-    ],
-  },
-  server: {
-    host: "::",
-    port: 8080,
-  },
-  plugins: [
+const isVercel = !!process.env.VERCEL;
+
+export default defineConfig(async ({ command }) => {
+  const plugins: any[] = [
     tsconfigPaths({ projects: ["./tsconfig.json"] }),
     tailwindcss(),
     tanstackStart({
-      server: { entry: "server" },
+      // On Vercel, use the default server entry (not the Cloudflare Workers one)
+      ...(isVercel ? {} : { server: { entry: "server" } }),
       importProtection: {
         behavior: "error",
         client: {
@@ -37,8 +22,36 @@ export default defineConfig(({ command }) => ({
       },
     }),
     viteReact(),
-    command === "build" && !process.env.VERCEL
-      ? cloudflare({ viteEnvironment: { name: "ssr" } })
-      : null,
-  ].filter(Boolean),
-}));
+  ];
+
+  // Only load Cloudflare plugin for non-Vercel production builds
+  if (command === "build" && !isVercel) {
+    try {
+      const { cloudflare } = await import("@cloudflare/vite-plugin");
+      plugins.push(cloudflare({ viteEnvironment: { name: "ssr" } }));
+    } catch {
+      // Cloudflare plugin not available, skip it
+    }
+  }
+
+  return {
+    resolve: {
+      alias: {
+        "@": `${process.cwd()}/src`,
+      },
+      dedupe: [
+        "react",
+        "react-dom",
+        "react/jsx-runtime",
+        "react/jsx-dev-runtime",
+        "@tanstack/react-query",
+        "@tanstack/query-core",
+      ],
+    },
+    server: {
+      host: "::",
+      port: 8080,
+    },
+    plugins,
+  };
+});
